@@ -1,5 +1,10 @@
 import { ghost } from 'onehostname/lib/backends'
+import { processImages } from './src/images';
 
-const blog = ghost("ghost", "blog.ghost.org")
+const blog = ghost("demo")
 
-fly.http.respondWith(blog)
+fly.http.respondWith(
+  processImages(
+    blog
+  )
+)
