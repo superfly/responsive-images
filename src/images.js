@@ -1,20 +1,31 @@
 import cache from './response-cache'
 
-export function processImages(fetch) {
+export function processImages(fetch, config) {
   return async function processImages(req, opts) {
     const url = new URL(req.url)
     const accept = req.headers.get("accept") || ""
+    const sizes = (config && config.sizes) || {}
     let webp = false
 
     let vary = []
+    // figure out if we need a new size
+    let width = undefined
+    if (url.search) {
+      const key = url.search.substring(1)
+      const s = sizes[key]
+      if (s && s.width) {
+        width = s.width
+        vary.push(`w${width}`)
+      }
+    }
     if (accept.includes("image/webp")) {
       vary.push("webp")
       webp = true
     }
-    vary = vary.sort()
 
     // generate a cache key with filename + variants
     const key = ["image", url.pathname].concat(vary).join(':')
+    console.log(key)
 
     let resp = await cache.get(key)
     if (resp) {
@@ -40,9 +51,16 @@ export function processImages(fetch) {
     // if we got here, it's an image
 
     let data = await resp.arrayBuffer()
-    if (webp) {
-      const image = new fly.Image(data)
-      const result = await image.webp().toBuffer()
+    let dirty = false
+    if (webp || width) {
+      let image = new fly.Image(data)
+      if (width) {
+        image.withoutEnlargement().resize(width)
+      }
+      if (webp) {
+        image.webp()
+      }
+      const result = await image.toBuffer()
       data = result.data
     }
 

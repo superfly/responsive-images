@@ -3,27 +3,6 @@ import { processImages } from './src/images';
 import { withDocument } from './src/html';
 
 const ghost = backends.generic("https://blog.ghost.org", { host: "blog.ghost.org" })
-
-fly.http.respondWith(
-  // just wrap our router up in 
-  // image processing middleware
-  processImages(
-    router
-  )
-)
-
-// The Ghost demo serves some images from another hostname
-// we'll route anything on /casper/ there
-const casper = backends.generic("https://casper.ghost.org/v1.0.0/", { host: "casper.ghost.org" })
-
-function router(req) {
-  const url = new URL(req.url)
-  if (url.pathname.startsWith("/casper/")) {
-    return casper(req, "/casper/")
-  }
-  return ghost(req)
-}
-
 const imageWidths = {
   "highlight-primary": {
     width: 1040,
@@ -34,8 +13,20 @@ const imageWidths = {
     selector: ".post-feed .post-card-image"
   }
   //selector: ".post-card.featured .post-card-image", width: 1040 },
-
 }
+
+fly.http.respondWith(
+  // just wrap our router up in 
+  // image processing middleware
+  processImages(
+    // writes images with sizes into html
+    resizeGhostImages(ghost),
+    {
+      sizes: imageWidths // options for processImages
+    }
+  )
+)
+
 function resizeGhostImages(fetch) {
   return async function resizeGhostImages(req, opts) {
     let resp = await withDocument(fetch, req, opts)
@@ -52,16 +43,33 @@ function resizeGhostImages(fetch) {
       for (const el of elements) {
         let style = el.getAttribute('style')
         if (style) {
-          console.log("found:", style)
-          style = style.replace(/(png|jpg|gif)\)/, `$1${append})`)
-          el.setAttribute('style', style)
+          // replace url(/blah.jpg.) in style attributes
+          const nstyle = style.replace(/(url\(\/.+)(png|jpg|gif)\)/, `$1$2${append})`)
+          if (nstyle != style) {
+            el.setAttribute('style', nstyle)
+          }
         }
       }
     }
+    const html = resp.document.documentElement.outerHTML
+    resp = new Response(html, resp)
+    resp.headers.delete("content-length")
     return resp
   }
 }
 
+
+// The Ghost demo serves some images from another hostname
+// we'll route anything on /casper/ there
+const casper = backends.generic("https://casper.ghost.org/v1.0.0/", { host: "casper.ghost.org" })
+
+function router(req) {
+  const url = new URL(req.url)
+  if (url.pathname.startsWith("/casper/")) {
+    return casper(req, "/casper/")
+  }
+  return ghost(req)
+}
 // Ghost's Demo uses casper.ghost.org for some image urls
 // we need to rewrite those so we can process them
 
