@@ -19,7 +19,10 @@ export async function set(key, response, ttl) {
     headers: {}
   }
   for (const h of goodHeaders) {
-    meta.headers[h] = response.headers.get(h)
+    const v = response.headers.get(h)
+    if (v) {
+      meta.headers[h] = v
+    }
   }
 
   const body = await response.clone().arrayBuffer()

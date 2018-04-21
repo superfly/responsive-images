@@ -8,7 +8,6 @@ export function processImages(fetch) {
 
     let vary = []
     if (accept.includes("image/webp")) {
-      console.log("making it webp")
       vary.push("webp")
       webp = true
     }
