@@ -2,17 +2,13 @@ import backends from 'onehostname/lib/backends'
 import { processImages } from './src/images';
 import { withDocument } from './src/html';
 
-const ghost = backends.ghost("demo")
+const ghost = backends.generic("https://blog.ghost.org", { host: "blog.ghost.org" })
 
 fly.http.respondWith(
   // just wrap our router up in 
   // image processing middleware
   processImages(
-    // proxies external image links
-    rewriteCasperImages(
-      // picks the right backend to send requests to
-      router
-    )
+    router
   )
 )
 
@@ -26,6 +22,44 @@ function router(req) {
     return casper(req, "/casper/")
   }
   return ghost(req)
+}
+
+const imageWidths = {
+  "highlight-primary": {
+    width: 1040,
+    selector: ".post-feed.highlight-feed-primary .post-card-image"
+  },
+  "post-feed": {
+    width: 320,
+    selector: ".post-feed .post-card-image"
+  }
+  //selector: ".post-card.featured .post-card-image", width: 1040 },
+
+}
+function resizeGhostImages(fetch) {
+  return async function resizeGhostImages(req, opts) {
+    let resp = await withDocument(fetch, req, opts)
+    if (!resp.document || !(resp.document instanceof Document)) {
+      // nothing to do
+      return resp
+    }
+
+    for (const k of Object.keys(imageWidths)) {
+      const o = imageWidths[k]
+      const elements = resp.document.querySelectorAll(o.selector)
+      const append = '?' + k
+
+      for (const el of elements) {
+        let style = el.getAttribute('style')
+        if (style) {
+          console.log("found:", style)
+          style = style.replace(/(png|jpg|gif)\)/, `$1${append})`)
+          el.setAttribute('style', style)
+        }
+      }
+    }
+    return resp
+  }
 }
 
 // Ghost's Demo uses casper.ghost.org for some image urls

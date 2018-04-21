@@ -13,7 +13,6 @@ export async function withDocument(fetchFn, req, opts) {
     return resp
   }
 
-  console.log("Reading DOM")
   let html = await resp.text()
   // the body can't be read again, make a new response
   resp = new Response(html, resp)
