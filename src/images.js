@@ -18,7 +18,7 @@ export function processImages(fetch, config) {
         vary.push(`w${width}`)
       }
     }
-    if (accept.includes("image/webp")) {
+    if (accept.includes("image/webp") && req.headers.get("fly-webp") !== "off") {
       vary.push("webp")
       webp = true
     }
@@ -67,7 +67,7 @@ export function processImages(fetch, config) {
     resp = new Response(data, resp)
     if (webp) resp.headers.set("content-type", "image/webp")
     resp.headers.set("content-length", data.byteLength)
-    await cache.set(key, resp, 3600) // cache for 3600s
+    await cache.set(key, resp, 3600 * 24) // cache for 24h
 
     resp.headers.set("Fly-Cache", "MISS")
 

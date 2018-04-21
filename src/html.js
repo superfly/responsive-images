@@ -1,7 +1,5 @@
 
-export async function withDocument(fetchFn, req, opts) {
-  let resp = await fetchFn(req, opts)
-  console.log(resp instanceof Response)
+export async function withDocument(resp) {
 
   if (resp.document) {
     // already done

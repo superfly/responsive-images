@@ -12,7 +12,6 @@ const imageWidths = {
     width: 320,
     selector: ".post-feed .post-card-image"
   }
-  //selector: ".post-card.featured .post-card-image", width: 1040 },
 }
 
 fly.http.respondWith(
@@ -29,7 +28,12 @@ fly.http.respondWith(
 
 function resizeGhostImages(fetch) {
   return async function resizeGhostImages(req, opts) {
-    let resp = await withDocument(fetch, req, opts)
+    let resp = await fetch(req, opts)
+    if (req.headers.get("fly-html-rewrite") === "off") {
+      return resp
+    }
+    resp = await withDocument(resp)
+    //let resp = await withDocument(fetch, req, opts)
     if (!resp.document || !(resp.document instanceof Document)) {
       // nothing to do
       return resp
